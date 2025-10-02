@@ -85,12 +85,22 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $rules = [
             'name' => 'required|string',
             'email' => 'required|email|unique:users',
             'password' => 'required|string|min:6',
-        ]);
+        ];
 
+        $messages = [
+            'required' => 'O campo :attribute é obrigatório.',
+            'email' => 'O campo :attribute deve ser um endereço de e-mail válido.',
+            'min' => 'A :attribute deve ter pelo menos :min caracteres.',
+
+            'email.unique' => 'Este e-mail já está em uso.',
+            'password.min' => 'A senha deve ter no mínimo 6 caracteres.',
+        ];
+
+        $data = $request->validate($rules, $messages);
         $data['password'] = bcrypt($data['password']);
 
         $user = $this->service->createUser($data);
@@ -128,16 +138,31 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $data = $request->validate([
+        $rules = [
             'name' => 'sometimes|string',
-            'email' => 'sometimes|email|unique:users,email,' . $id,
+            'email' => 'sometimes|email|unique:users,email,' . $id, 
             'password' => 'sometimes|string|min:6',
-        ]);
+        ];
 
-        if (isset($data['password'])) $data['password'] = bcrypt($data['password']);
+        $messages = [
+            'required' => 'O campo :attribute é obrigatório.', 
+            'email' => 'O campo :attribute deve ser um endereço de e-mail válido.',
+            'min' => 'A :attribute deve ter pelo menos :min caracteres.',
+            'email.unique' => 'Este e-mail já está em uso por outro usuário.',
+            'password.min' => 'A senha deve ter no mínimo 6 caracteres.',
+        ];
+
+        $data = $request->validate($rules, $messages);
+
+        if (isset($data['password'])) {
+            $data['password'] = bcrypt($data['password']);
+        }
 
         $user = $this->service->updateUser($id, $data);
-        if (!$user) return response()->json(['message' => 'User not found'], 404);
+        
+        if (!$user) {
+            return response()->json(['message' => 'Usuário não encontrado'], 404);
+        }
 
         return response()->json($user);
     }
